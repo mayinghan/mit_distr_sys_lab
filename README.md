@@ -1,3 +1,3 @@
-# MIT 6.824 labs
+# MIT distriuted system labs
 
 my shitty implementation
