@@ -11,10 +11,9 @@ import (
 	"sync"
 )
 
-const IntermediateDir = "./interresult"
 const OutputDir = "./mr_output"
 
-func handleHandler() {
+func panicHandler() {
 	if err := recover(); err != nil {
 		log.Println("recovered")
 	}
@@ -39,7 +38,7 @@ type Coordinator struct {
 }
 
 func (c *Coordinator) GetJob(req *GetJobRequest, resp *GetJobResponse) {
-	defer handleHandler()
+	defer panicHandler()
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -48,18 +47,18 @@ func (c *Coordinator) GetJob(req *GetJobRequest, resp *GetJobResponse) {
 		job = c.fetchTask(c.mappers)
 		if job == nil {
 			log.Printf("No more available mapper tasks")
-			resp.Status = -1
+			resp.Status = NoPending
 			return
 		}
 	} else if c.nReducer > 0 {
 		job = c.fetchTask(c.reducers)
 		if job == nil {
 			log.Printf("No more available reducer tasks")
-			resp.Status = -1
+			resp.Status = NoPending
 			return
 		}
 	} else {
-		resp.Status = 100
+		resp.Status = AllDone
 		return
 	}
 
@@ -70,8 +69,12 @@ func (c *Coordinator) GetJob(req *GetJobRequest, resp *GetJobResponse) {
 	resp.Output = job.Output
 	resp.JobType = job.Type
 	resp.JobId = job.Id
+	resp.Status = Success
+}
 
-	return
+func (c *Coordinator) GetReducerCount(req *GetReducerCountRequest, resp *GetReducerCountResponse) {
+	// 从c++的经验来看，这里应该不用锁
+	resp.ReducerCount = len(c.reducers)
 }
 
 func (c *Coordinator) fetchTask(jobList []JobMeta) (job *JobMeta) {
@@ -121,8 +124,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c.nMapper = nMap
 	c.nReducer = nReduce
 	for i := 0; i < nMap; i++ {
-		interResultOutput := path.Join(IntermediateDir, "map", strconv.Itoa(i))
-		c.mappers = append(c.mappers, JobMeta{i, "mapper", files[i], interResultOutput, 0, -1})
+		c.mappers = append(c.mappers, JobMeta{i, "mapper", files[i], "", 0, -1})
 	}
 
 	for i := 0; i < nReduce; i++ {
