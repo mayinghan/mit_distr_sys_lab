@@ -20,12 +20,28 @@ type GetJobRequest struct {
 	WorkerId int
 }
 
+type GetJobStatus int32
+
+const (
+	Success GetJobStatus = iota
+	Fail
+	NoPending
+	AllDone
+)
+
 type GetJobResponse struct {
-	Status  int // 0: get task succeeded -1: get task failed 100: no more task
+	Status  GetJobStatus
 	JobType string
 	JobId   int
 	Input   string
 	Output  string
+}
+
+type GetReducerCountRequest struct {
+}
+
+type GetReducerCountResponse struct {
+	ReducerCount int
 }
 
 type ReportJobRequest struct {
@@ -38,8 +54,6 @@ type ReportJobRequest struct {
 type ReportJobResponse struct {
 	Status int
 }
-
-// Add your RPC definitions here.
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.
